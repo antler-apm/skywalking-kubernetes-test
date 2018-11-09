@@ -1,0 +1,103 @@
+---
+apiVersion: v1
+kind: List
+items:
+- apiVersion: extensions/v1beta1
+  kind: Deployment
+  metadata:
+    name: skywalking-server
+    labels:
+      app: collector
+    namespace: skywalking
+  spec:
+    template:
+      metadata:
+        labels:
+          app: collector
+      spec:
+        containers:
+        - image: antler/skywalking-collector:latest
+          name: collector
+          imagePullPolicy: Always
+          volumeMounts:
+          - mountPath:  /opt/skywalking/apache-skywalking-apm-incubating/config
+            name: collector-config
+          ports:
+          - containerPort: 10800
+          - containerPort: 11800
+          - containerPort: 11900
+          - containerPort: 12800
+        - image: antler/skywalking-ui:latest
+          name: webapp
+          imagePullPolicy: Always
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          volumeMounts:
+          - mountPath: /opt/skywalking/apache-skywalking-apm-incubating/webapp/config
+            name: webapp-config
+        volumes:
+        - name: collector-config
+          configMap:
+            name: collector-config
+            items:
+            - key: config
+              path:  application.yml
+            - key: log4j
+              path:  log4j.xml
+            - key: component-libraries
+              path:  component-libraries.yml
+        - name: webapp-config
+          configMap:
+            name: webapp-config
+            items:
+            - key: webapp
+              path: webapp.yml
+        imagePullSecrets:
+        - name: registrykey
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: collector
+    name: webapp
+    namespace: skywalking
+  spec:
+    type: NodePort
+    ports:
+    - name: webapp
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: collector
+    sessionAffinity: None
+
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: collector
+    labels:
+      app: collector
+    namespace: skywalking
+  spec:
+    selector:
+      app: collector
+    ports:
+    - port: 10800
+      targetPort: 10800
+      name: collector-name
+    - port: 11800
+      targetPort: 11800
+      name: collector-grpc
+    - port: 11900
+      targetPort: 11900
+      name: collector
+    - port: 12800
+      targetPort: 12800
+      name: collector-ui
+    - port: 12900
+      targetPort: 12900
+      name: collector-agent
+

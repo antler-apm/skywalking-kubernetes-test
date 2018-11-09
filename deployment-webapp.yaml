@@ -1,0 +1,53 @@
+---
+apiVersion: v1
+kind: List
+items:
+- apiVersion: extensions/v1beta1
+  kind: Deployment
+  metadata:
+    name: skywalking-webapp
+    labels:
+      app: webapp
+    namespace: skywalking
+  spec:
+    template:
+      metadata:
+        labels:
+          app: webapp
+      spec:
+        containers:
+        - image: antler/skywalking-ui:latest
+          name: webapp
+          imagePullPolicy: Always
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          volumeMounts:
+          - mountPath: /opt/skywalking/apache-skywalking-apm-incubating/webapp/config
+            name: webapp-config
+        volumes:
+        - name: webapp-config
+          configMap:
+            name: webapp-config
+            items:
+            - key: webapp
+              path: webapp.yml
+        imagePullSecrets:
+        - name: registrykey
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: webapp
+    name: webapp
+    namespace: skywalking
+  spec:
+    type: NodePort
+    ports:
+    - name: webapp
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: webapp
+    sessionAffinity: None
